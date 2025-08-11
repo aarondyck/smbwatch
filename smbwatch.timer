@@ -1,0 +1,12 @@
+# /etc/systemd/system/smbwatch.timer
+
+[Unit]
+Description=Run smbwatch service every 5 minutes
+
+[Timer]
+# Defines how often the service will be triggered.
+# This runs the service 5 minutes after it was last activated.
+OnUnitActiveSec=5min
+
+[Install]
+WantedBy=timers.target
