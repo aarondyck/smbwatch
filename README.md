@@ -2,10 +2,6 @@
 
 `smbwatch` is a simple `systemd`-based service designed to monitor the memory usage of Samba processes and preemptively prevent out-of-memory issues by flushing the filesystem cache.
 
-## 💡 The Problem
-
-File servers, especially those running Samba, can sometimes experience performance degradation or even run out of memory due to aggressive caching. This is often caused by the Linux kernel holding a large amount of data in its page cache, which can consume available RAM. While this caching is generally a good thing, in some scenarios it can lead to instability. The `smbwatch` tool was created to address this specific problem by proactively running the `sync` command to flush the cache before it becomes a critical issue.
-
 ## ⚙️ How It Works
 
 This project consists of four main components:
@@ -33,3 +29,62 @@ The easiest way to install this tool is to use the provided `setup.sh` bash scri
 1. Download the `setup.sh` script to your server.
 
 2. Run the script with `sudo` permissions:
+
+   ```
+   sudo bash setup.sh
+   
+   
+   ```
+
+The script will automatically create the necessary files, set permissions, and enable and start the `systemd` timer.
+
+## 📝 Configuration
+
+You can customize the memory threshold by editing the `smbwatch.conf` file.
+
+```
+sudo nano /etc/smbwatch.conf
+
+
+```
+
+Inside, you will find the `memory_threshold_mb` option. Change this value to a number (in MB) that is appropriate for your system's resources and usage patterns.
+
+```
+[smbwatch]
+memory_threshold_mb = 1024
+
+
+```
+
+## ✅ Monitoring
+
+You can monitor the status and output of the service using `systemd` and `journalctl`:
+
+* Check the status of the timer:
+
+  ```
+  systemctl status smbwatch.timer
+  
+  
+  ```
+
+* View the live logs of the service:
+
+  ```
+  journalctl -u smbwatch.service -f
+  
+  
+  ```
+
+* You can also directly inspect the log file:
+
+  ```
+  tail -f /var/log/smbwatch.log
+  
+  
+  ```
+
+## 📜 License
+
+This project is licensed under the GPL3.
