@@ -9,9 +9,13 @@ import logging
 from logging.handlers import RotatingFileHandler
 
 # Set up logging to a rotating file
-LOG_FILE = '/var/log/smbwatch.log'
+LOG_DIR = '/var/log/smbwatch'
+LOG_FILE = os.path.join(LOG_DIR, 'smbwatch.log')
 LOG_MAX_BYTES = 10 * 1024 * 1024 # 10 MB
 LOG_BACKUP_COUNT = 1
+
+# Ensure the log directory exists
+os.makedirs(LOG_DIR, exist_ok=True)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -43,15 +47,22 @@ def get_smb_memory_usage():
                 pass
     return total_memory_mb, smb_processes
 
-def run_sync_command():
+
+def run_sync_command(before_memory_mb):
     """
     Executes the 'sync' command to flush file system caches.
-    This is the core action triggered by the memory threshold.
+    Logs memory usage before and after, and how much was freed.
     """
-    logging.info("Memory usage exceeds threshold. Running 'sync' command...")
+    logging.info(f"Memory usage exceeds threshold ({before_memory_mb:.2f} MB). Running 'sync' command...")
     try:
         os.system("sync")
-        logging.info("'sync' command completed.")
+        logging.info("'sync' command completed. Checking memory usage again...")
+        # Wait a moment for the system to settle
+        import time
+        time.sleep(2)
+        after_memory_mb, _ = get_smb_memory_usage()
+        freed_mb = before_memory_mb - after_memory_mb
+        logging.info(f"Memory usage after sync: {after_memory_mb:.2f} MB. Memory freed: {freed_mb:.2f} MB.")
     except Exception as e:
         logging.error(f"Error running 'sync' command: {e}")
 
@@ -79,7 +90,7 @@ def main():
 
     # Get the current memory usage of smb processes
     current_memory_mb, smb_processes = get_smb_memory_usage()
-    
+
     # Log the details of each individual smb process
     for proc in smb_processes:
         logging.info(f"Process PID: {proc['pid']}, Name: {proc['name']}, Memory: {proc['memory_mb']:.2f} MB")
@@ -91,12 +102,12 @@ def main():
     else:
         logging.info(f"Current smb total memory usage: {current_memory_mb:.2f} MB. Threshold: {threshold_mb} MB.")
 
+
     # Check if the current memory usage exceeds the threshold
     if current_memory_mb > threshold_mb:
-        run_sync_command()
+        run_sync_command(current_memory_mb)
     else:
         logging.info("Memory usage is below the threshold. No action needed.")
 
 if __name__ == "__main__":
     main()
-

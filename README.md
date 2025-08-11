@@ -80,7 +80,7 @@ You can monitor the status and output of the service using `systemd` and `journa
 * You can also directly inspect the log file:
 
   ```
-  tail -f /var/log/smbwatch.log
+  tail -f /var/log/smbwatch/smbwatch.log
   
   
   ```

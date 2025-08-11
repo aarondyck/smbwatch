@@ -63,6 +63,7 @@ if ! python3 -c "import psutil" &> /dev/null; then
     fi
 fi
 
+
 # Ask for memory threshold and validate input
 while true; do
     read -p "Enter the maximum memory threshold for Samba in MB (e.g., 1024): " THRESHOLD
@@ -73,11 +74,26 @@ while true; do
     fi
 done
 
+
+# Ask for timer frequency in minutes and use OnCalendar
+while true; do
+    read -p "Enter the frequency for the timer in minutes (e.g., 5 for every 5 minutes): " TIMER_MINUTES
+    if [[ "$TIMER_MINUTES" =~ ^[0-9]+$ ]] && [ "$TIMER_MINUTES" -gt 0 ]; then
+        break
+    else
+        echo "Invalid input. Please enter a positive integer."
+    fi
+done
+
+# Construct the OnCalendar value for every N minutes
+TIMER_LINE="OnCalendar=*-*-* *:0/$TIMER_MINUTES:0"
+
 echo "Dependencies and configuration confirmed."
 
 # --- File Creation ---
 
 echo "Creating Python service script: /usr/local/bin/smbwatch.py"
+
 
 # Create the Python script
 cat << 'EOF' > /usr/local/bin/smbwatch.py
@@ -92,9 +108,13 @@ import logging
 from logging.handlers import RotatingFileHandler
 
 # Set up logging to a rotating file
-LOG_FILE = '/var/log/smbwatch.log'
+LOG_DIR = '/var/log/smbwatch'
+LOG_FILE = os.path.join(LOG_DIR, 'smbwatch.log')
 LOG_MAX_BYTES = 10 * 1024 * 1024 # 10 MB
 LOG_BACKUP_COUNT = 1
+
+# Ensure the log directory exists
+os.makedirs(LOG_DIR, exist_ok=True)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -219,17 +239,20 @@ Restart=on-failure
 WantedBy=multi-user.target
 EOF
 
+
 echo "Creating systemd timer file: /etc/systemd/system/smbwatch.timer"
 
-# Create the systemd timer file
-cat << 'EOF' > /etc/systemd/system/smbwatch.timer
+# Create the systemd timer file with user-selected frequency
+cat << EOF > /etc/systemd/system/smbwatch.timer
 # /etc/systemd/system/smbwatch.timer
 
 [Unit]
-Description=Run smbwatch service every 5 minutes
+Description=Run smbwatch service on schedule
 
 [Timer]
-OnUnitActiveSec=5min
+$TIMER_LINE
+AccuracySec=1s
+Persistent=true
 
 [Install]
 WantedBy=timers.target
