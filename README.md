@@ -87,4 +87,4 @@ You can monitor the status and output of the service using `systemd` and `journa
 
 ## 📜 License
 
-This project is licensed under the GPL3.
+This project is licensed under the   GNU GENERAL PUBLIC LICENSE Version 3.
