@@ -31,13 +31,13 @@ def get_smb_memory_usage():
     # Iterate through all running processes
     for proc in psutil.process_iter(['name', 'memory_info']):
         # Check if the process name starts with 'smb'
-        if proc.info.name.startswith('smb'):
+        if proc.info['name'].startswith('smb'):
             try:
                 # Add the process's resident set size (RSS) to the total
                 # psutil.Process.memory_info().rss is in bytes, so we convert to MB
-                memory_mb = proc.info.memory_info.rss / (1024 * 1024)
+                memory_mb = proc.info['memory_info'].rss / (1024 * 1024)
                 total_memory_mb += memory_mb
-                smb_processes.append({'pid': proc.pid, 'name': proc.info.name, 'memory_mb': memory_mb})
+                smb_processes.append({'pid': proc.pid, 'name': proc.info['name'], 'memory_mb': memory_mb})
             except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
                 # Handle potential errors if a process terminates or is inaccessible
                 pass
@@ -60,7 +60,7 @@ def main():
     Main function to read config, check memory, and take action.
     """
     config_path = "/etc/smbwatch.conf"
-    
+
     # Check if the configuration file exists
     if not os.path.exists(config_path):
         logging.error(f"Configuration file not found at {config_path}")
