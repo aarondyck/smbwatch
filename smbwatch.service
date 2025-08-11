@@ -1,0 +1,16 @@
+# /etc/systemd/system/smbwatch.service
+
+[Unit]
+Description=Samba Memory Usage Watcher Service
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/smbwatch.py
+# Set a user for the service to run as (optional, but good practice).
+# User=samba
+# Restart the service if it fails.
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
