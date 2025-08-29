@@ -48,23 +48,47 @@ def get_smb_memory_usage():
     return total_memory_mb, smb_processes
 
 
+
+def restart_samba_service():
+    """
+    Checks for 'smb' or 'smbd' service and restarts it.
+    """
+    import subprocess
+    for service_name in ["smb", "smbd"]:
+        try:
+            result = subprocess.run(["systemctl", "is-active", service_name], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            if result.stdout.decode().strip() == "active":
+                logging.info(f"Restarting Samba service: {service_name}")
+                restart_result = subprocess.run(["systemctl", "restart", service_name], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                if restart_result.returncode == 0:
+                    logging.info(f"Successfully restarted {service_name} service.")
+                else:
+                    logging.error(f"Failed to restart {service_name} service: {restart_result.stderr.decode().strip()}")
+                return
+        except Exception as e:
+            logging.error(f"Error checking or restarting service {service_name}: {e}")
+    logging.warning("No active Samba service ('smb' or 'smbd') found to restart.")
+
+
+
 def run_sync_command(before_memory_mb):
     """
-    Executes the 'sync' command to flush file system caches.
-    Logs memory usage before and after, and how much was freed.
+    Executes the 'sync' command to flush file system caches and restarts the Samba service.
+    Logs memory usage before and after both steps, and the total memory recovered.
     """
+    import time
     logging.info(f"Memory usage exceeds threshold ({before_memory_mb:.2f} MB). Running 'sync' command...")
     try:
         os.system("sync")
-        logging.info("'sync' command completed. Checking memory usage again...")
-        # Wait a moment for the system to settle
-        import time
+        logging.info("'sync' command completed. Restarting Samba service...")
+        restart_samba_service()
+        logging.info("Waiting after service restart...")
         time.sleep(2)
-        after_memory_mb, _ = get_smb_memory_usage()
-        freed_mb = before_memory_mb - after_memory_mb
-        logging.info(f"Memory usage after sync: {after_memory_mb:.2f} MB. Memory freed: {freed_mb:.2f} MB.")
+        after_restart_mb, _ = get_smb_memory_usage()
+        total_freed_mb = before_memory_mb - after_restart_mb
+        logging.info(f"Memory usage after sync and service restart: {after_restart_mb:.2f} MB. Total memory freed: {total_freed_mb:.2f} MB.")
     except Exception as e:
-        logging.error(f"Error running 'sync' command: {e}")
+        logging.error(f"Error running sync or restarting service: {e}")
 
 def main():
     """
